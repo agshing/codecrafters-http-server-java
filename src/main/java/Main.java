@@ -17,7 +17,7 @@ public class Main {
             System.out.println("Client connected: " + clientSocket.getInetAddress());
             // BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
             PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
-            String response = "HTTP/1.1 200 OK\\r\\n\\r\\n";
+            String response = "HTTP/1.1 200 OK\r\n\r\n";
             out.println(response);
 
             // Close connection
