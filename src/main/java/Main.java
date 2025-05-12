@@ -4,28 +4,37 @@ import java.net.ServerSocket;
 import java.net.Socket;
 
 public class Main {
+
+    private static final int PORT = 4221;
+    private static final String RESPONSE = "HTTP/1.1 200 OK\r\n\r\n";
+
     public static void main(String[] args) {
-        try {
-            ServerSocket serverSocket = new ServerSocket(4221);
-
-            // Since the tester restarts your program quite often, setting SO_REUSEADDR
-            // ensures that we don't run into 'Address already in use' errors
+        try (ServerSocket serverSocket = new ServerSocket(PORT)) {
+            // Avoid "Address already in use" errors when restarting
             serverSocket.setReuseAddress(true);
+            System.out.println("Server is listening on port " + PORT);
 
-            Socket clientSocket = serverSocket.accept();
-            System.out.println("Accepted new connection");
-            System.out.println("Client connected: " + clientSocket.getInetAddress());
-            // BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-            PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
-            String response = "HTTP/1.1 200 OK\r\n\r\n";
-            out.println(response);
-
-            // Close connection
-            clientSocket.close();
-            System.out.println("Client connection closed.");
+            while (true) {
+                handleClient(serverSocket.accept());
+            }
 
         } catch (IOException e) {
-            System.out.println("IOException: " + e.getMessage());
+            System.err.println("Server exception: " + e.getMessage());
         }
+    }
+
+    private static void handleClient(Socket clientSocket) {
+        System.out.println("Accepted connection from " + clientSocket.getInetAddress());
+
+        try (Socket socket = clientSocket; PrintWriter out = new PrintWriter(socket.getOutputStream(), true)) {
+            out.print(RESPONSE);
+            out.flush();
+            System.out.println("Response sent to client.");
+
+        } catch (IOException e) {
+            System.err.println("Client handling exception: " + e.getMessage());
+        }
+
+        System.out.println("Client connection closed.");
     }
 }
