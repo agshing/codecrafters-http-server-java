@@ -4,6 +4,8 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -16,6 +18,7 @@ public class Main {
     private static final Pattern ENDPOINT_PATTERN = Pattern.compile("^GET\\s+(\\S+)\\s+HTTP/1\\.1", Pattern.MULTILINE);
     private static final Pattern USER_AGENT_HEADER_PATTERN = Pattern.compile("(?i)^User-Agent:\\s*(.+)$", Pattern.MULTILINE);
 
+    private static final ExecutorService threadPool = Executors.newFixedThreadPool(10);
 
     public static void main(String[] args) {
         try (ServerSocket serverSocket = new ServerSocket(PORT)) {
@@ -24,7 +27,10 @@ public class Main {
             System.out.println("Server is listening on port " + PORT);
 
             while (true) {
-                handleClient(serverSocket.accept());
+                Socket clientSocket = serverSocket.accept();
+                System.out.println("New client connected: " + clientSocket.getInetAddress());
+
+                threadPool.execute(() -> handleClient(clientSocket));
             }
 
         } catch (IOException e) {
