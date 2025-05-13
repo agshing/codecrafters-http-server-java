@@ -10,8 +10,9 @@ import java.util.regex.Pattern;
 public class Main {
 
     private static final int PORT = 4221;
-    private static final String RESPONSE_200 = "HTTP/1.1 200 OK\r\n\r\n";
-    private static final String RESPONSE_404 = "HTTP/1.1 404 Not Found\r\n\r\n";
+    private static final String CRLF = "\r\n";
+    private static final String RESPONSE_200 = "HTTP/1.1 200 OK\r\n";
+    private static final String RESPONSE_404 = "HTTP/1.1 404 Not Found\r\n";
     private static final Pattern ENDPOINT_PATTERN = Pattern.compile("^GET\\s+(\\S+)\\s+HTTP/1\\.1", Pattern.MULTILINE);
 
     public static void main(String[] args) {
@@ -48,9 +49,20 @@ public class Main {
 
             String endpoint = extractGetEndpoint(request);
             if ("/".equals(endpoint)) {
-                out.print(RESPONSE_200);
+                out.print(RESPONSE_200 + CRLF);
+
+            } else if (endpoint != null && endpoint.startsWith("/echo/")) {
+                String msg = endpoint.substring("/echo/".length());
+                String headers = String.join(CRLF,
+                        "Content-Type: text/plain",
+                        "Content-Length: " + msg.length()
+                ) + CRLF + CRLF;
+                String response = RESPONSE_200 + headers + msg;
+                System.out.println("Response:\n" + response);
+                out.print(response);
+
             } else {
-                out.print(RESPONSE_404);
+                out.print(RESPONSE_404 + CRLF);
             }
 
             out.flush();
