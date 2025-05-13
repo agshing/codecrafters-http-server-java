@@ -4,6 +4,9 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
@@ -17,10 +20,15 @@ public class Main {
     private static final String RESPONSE_404 = "HTTP/1.1 404 Not Found\r\n";
     private static final Pattern ENDPOINT_PATTERN = Pattern.compile("^GET\\s+(\\S+)\\s+HTTP/1\\.1", Pattern.MULTILINE);
     private static final Pattern USER_AGENT_HEADER_PATTERN = Pattern.compile("(?i)^User-Agent:\\s*(.+)$", Pattern.MULTILINE);
+    private static String FILES_FOLDER = "/tmp/";
 
     private static final ExecutorService threadPool = Executors.newFixedThreadPool(10);
 
     public static void main(String[] args) {
+        if (args.length > 1) {
+            FILES_FOLDER = args[1];
+        }
+
         try (ServerSocket serverSocket = new ServerSocket(PORT)) {
             // Avoid "Address already in use" errors when restarting
             serverSocket.setReuseAddress(true);
@@ -79,6 +87,23 @@ public class Main {
         } else if (endpoint != null && endpoint.startsWith("/echo/")) {
             String msg = endpoint.substring(endpoint.indexOf('/', 1) + 1);
             return buildTextResponse(msg);
+        } else if (endpoint != null && endpoint.startsWith("/files/")) {
+            String fileName = endpoint.substring(endpoint.indexOf('/', 1) + 1);
+            String filePath = FILES_FOLDER + fileName;
+            Path path = Paths.get(filePath);
+
+            if (Files.exists(path)) {
+                try {
+                    byte[] fileBytes = Files.readAllBytes(path);
+                    return buildFileResponse(fileBytes);
+                } catch (IOException e) {
+                    System.err.println("Error reading the file: " + e.getMessage());
+                }
+            } else {
+                System.out.println("File does not exist: " + filePath);
+            }
+
+            return RESPONSE_404 + CRLF;
         } else if ("/user-agent".equals(endpoint)) {
             String userAgent = extractUserAgentHeader(request);
             return buildTextResponse(userAgent != null ? userAgent : "");
@@ -93,6 +118,14 @@ public class Main {
                 "Content-Length: " + msg.length()
         ) + CRLF + CRLF;
         return RESPONSE_200 + headers + msg;
+    }
+
+    private static String buildFileResponse(byte[] fileContent) {
+        String headers = String.join(CRLF,
+                "Content-Type: application/octet-stream",
+                "Content-Length: " + fileContent.length
+        ) + CRLF + CRLF;
+        return RESPONSE_200 + headers + new String(fileContent);
     }
 
     private static String extractGetEndpoint(String request) {
