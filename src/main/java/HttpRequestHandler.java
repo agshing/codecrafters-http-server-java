@@ -25,7 +25,8 @@ class HttpRequestHandler {
             return HttpConstants.RESPONSE_200 + HttpConstants.CRLF;
         } else if (endpoint.startsWith("/echo/")) {
             String msg = endpoint.substring("/echo/".length());
-            return buildTextResponse(msg);
+            String encoding = extractHeader(request.headers(), "Accept-Encoding");
+            return buildTextResponse(msg, encoding);
         } else if (endpoint.startsWith("/files/")) {
             String fileName = endpoint.substring("/files/".length());
             Path path = Paths.get(filesFolder, fileName);
@@ -41,7 +42,7 @@ class HttpRequestHandler {
             }
         } else if ("/user-agent".equals(endpoint)) {
             String userAgent = extractHeader(request.headers(), "User-Agent");
-            return buildTextResponse(userAgent != null ? userAgent : "");
+            return buildTextResponse(userAgent != null ? userAgent : "", null);
         } else {
             return HttpConstants.RESPONSE_404 + HttpConstants.CRLF;
         }
@@ -71,9 +72,14 @@ class HttpRequestHandler {
         return null;
     }
 
-    private static String buildTextResponse(String msg) {
+    private static String buildTextResponse(String msg, String encoding) {
         String headers = "Content-Type: text/plain" + HttpConstants.CRLF +
-                "Content-Length: " + msg.length() + HttpConstants.CRLF + HttpConstants.CRLF;
+                "Content-Length: " + msg.length() + HttpConstants.CRLF;
+        if("gzip".equals(encoding)) {
+            headers += "Content-Encoding: gzip" + HttpConstants.CRLF;
+        }
+        headers += HttpConstants.CRLF;
+
         return HttpConstants.RESPONSE_200 + headers + msg;
     }
 
