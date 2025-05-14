@@ -35,9 +35,9 @@ public class Main {
         ) {
             HttpRequest request = HttpRequestParser.parse(inputStream);
             HttpResponse response = HttpRequestHandler.handle(request, filesFolder);
-            outputStream.write(response.txtBody().getBytes(StandardCharsets.UTF_8));
-            if(response.byteBody() != null) {
-                outputStream.write(response.byteBody());
+            outputStream.write(response.headers().getBytes(StandardCharsets.UTF_8));
+            if(response.body() != null) {
+                outputStream.write(response.body());
             }
             outputStream.flush();
 

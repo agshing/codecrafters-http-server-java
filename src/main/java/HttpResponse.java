@@ -1,1 +1,1 @@
-public record HttpResponse(String txtBody, byte[] byteBody) {}
+public record HttpResponse(String headers, byte[] body) {}
