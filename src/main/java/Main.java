@@ -34,8 +34,11 @@ public class Main {
                 OutputStream outputStream = socket.getOutputStream()
         ) {
             HttpRequest request = HttpRequestParser.parse(inputStream);
-            String response = HttpRequestHandler.handle(request, filesFolder);
-            outputStream.write(response.getBytes(StandardCharsets.UTF_8));
+            HttpResponse response = HttpRequestHandler.handle(request, filesFolder);
+            outputStream.write(response.txtBody().getBytes(StandardCharsets.UTF_8));
+            if(response.byteBody() != null) {
+                outputStream.write(response.byteBody());
+            }
             outputStream.flush();
 
         } catch (IOException e) {

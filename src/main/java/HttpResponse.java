@@ -1,4 +1,1 @@
-package PACKAGE_NAME;
-
-public class HttpResponse {
-}
+public record HttpResponse(String txtBody, byte[] byteBody) {}
