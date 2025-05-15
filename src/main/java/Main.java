@@ -33,7 +33,6 @@ public class Main {
                 InputStream inputStream = socket.getInputStream();
                 OutputStream outputStream = socket.getOutputStream()
         ) {
-            BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
             while (!socket.isClosed()) {
                 HttpRequest request = HttpRequestParser.parse(inputStream);
                 HttpResponse response = HttpRequestHandler.handle(request, filesFolder);
