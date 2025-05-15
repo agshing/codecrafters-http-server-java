@@ -33,16 +33,30 @@ public class Main {
                 InputStream inputStream = socket.getInputStream();
                 OutputStream outputStream = socket.getOutputStream()
         ) {
-            HttpRequest request = HttpRequestParser.parse(inputStream);
-            HttpResponse response = HttpRequestHandler.handle(request, filesFolder);
-            outputStream.write(response.headers().getBytes(StandardCharsets.UTF_8));
-            if(response.body() != null) {
-                outputStream.write(response.body());
-            }
-            outputStream.flush();
+            while (!socket.isClosed()) {
+                HttpRequest request = HttpRequestParser.parse(inputStream);
+                HttpResponse response = HttpRequestHandler.handle(request, filesFolder);
 
+                outputStream.write(response.headers().getBytes(StandardCharsets.UTF_8));
+                if (response.body() != null) {
+                    outputStream.write(response.body());
+                }
+                outputStream.flush();
+
+                // Check for Connection: close header
+                String connectionHeader = HttpRequestParser.extractHeader(request.headers(), "Connection");
+                if ("close".equalsIgnoreCase(connectionHeader)) {
+                    break;
+                }
+            }
         } catch (IOException e) {
             System.err.println("Client handling exception: " + e.getMessage());
+        } finally {
+            try {
+                socket.close();
+            } catch (IOException e) {
+                System.err.println("Error closing socket: " + e.getMessage());
+            }
         }
     }
 }

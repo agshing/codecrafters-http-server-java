@@ -25,7 +25,7 @@ class HttpRequestHandler {
             return new HttpResponse(HttpConstants.RESPONSE_200 + HttpConstants.CRLF, null);
         } else if (endpoint.startsWith("/echo/")) {
             String msg = endpoint.substring("/echo/".length());
-            String encoding = extractHeader(request.headers(), "Accept-Encoding");
+            String encoding = HttpRequestParser.extractHeader(request.headers(), "Accept-Encoding");
             return buildTextResponse(msg, ContentEncoding.fromHeader(encoding));
         } else if (endpoint.startsWith("/files/")) {
             String fileName = endpoint.substring("/files/".length());
@@ -41,7 +41,7 @@ class HttpRequestHandler {
                 return new HttpResponse(HttpConstants.RESPONSE_404 + HttpConstants.CRLF, null);
             }
         } else if ("/user-agent".equals(endpoint)) {
-            String userAgent = extractHeader(request.headers(), "User-Agent");
+            String userAgent = HttpRequestParser.extractHeader(request.headers(), "User-Agent");
             return buildTextResponse(userAgent != null ? userAgent : "", ContentEncoding.NONE);
         } else {
             return new HttpResponse(HttpConstants.RESPONSE_404 + HttpConstants.CRLF, null);
@@ -61,15 +61,6 @@ class HttpRequestHandler {
             }
         }
         return new HttpResponse(HttpConstants.RESPONSE_404 + HttpConstants.CRLF, null);
-    }
-
-    private static String extractHeader(String headers, String key) {
-        for (String line : headers.split("\r\n")) {
-            if (line.toLowerCase().startsWith(key.toLowerCase() + ":")) {
-                return line.split(":", 2)[1].trim();
-            }
-        }
-        return null;
     }
 
     private static HttpResponse buildTextResponse(String msg, ContentEncoding encoding) {
