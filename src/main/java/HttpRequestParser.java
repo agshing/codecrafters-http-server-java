@@ -41,6 +41,15 @@ class HttpRequestParser {
         return new HttpRequest(method, endpoint, headers, body);
     }
 
+    public static String extractHeader(String headers, String key) {
+        for (String line : headers.split("\r\n")) {
+            if (line.toLowerCase().startsWith(key.toLowerCase() + ":")) {
+                return line.split(":", 2)[1].trim();
+            }
+        }
+        return null;
+    }
+
     private static boolean endsWithCRLFCRLF(byte[] data) {
         int len = data.length;
         return len >= 4 &&
