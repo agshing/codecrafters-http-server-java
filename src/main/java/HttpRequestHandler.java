@@ -14,7 +14,7 @@ class HttpRequestHandler {
                 return handlePost(request, filesFolder);
             }
             default -> {
-                return new HttpResponse(HttpConstants.RESPONSE_404 + HttpConstants.CRLF, null);
+                return HttpResponse.plainText(HttpConstants.RESPONSE_404 + HttpConstants.CRLF);
             }
         }
     }
@@ -22,29 +22,29 @@ class HttpRequestHandler {
     private static HttpResponse handleGet(HttpRequest request, String filesFolder) {
         String endpoint = request.endpoint();
         if ("/".equals(endpoint)) {
-            return new HttpResponse(HttpConstants.RESPONSE_200 + HttpConstants.CRLF, null);
+            return HttpResponse.plainText(HttpConstants.RESPONSE_200 + HttpConstants.CRLF);
         } else if (endpoint.startsWith("/echo/")) {
             String msg = endpoint.substring("/echo/".length());
             String encoding = HttpRequestParser.extractHeader(request.headers(), "Accept-Encoding");
-            return buildTextResponse(msg, ContentEncoding.fromHeader(encoding));
+            return buildTextResponse(msg, request.headers(), ContentEncoding.fromHeader(encoding));
         } else if (endpoint.startsWith("/files/")) {
             String fileName = endpoint.substring("/files/".length());
             Path path = Paths.get(filesFolder, fileName);
             if (Files.exists(path)) {
                 try {
                     byte[] content = Files.readAllBytes(path);
-                    return buildFileResponse(content);
+                    return buildFileResponse(content, request.headers());
                 } catch (IOException e) {
-                    return new HttpResponse(HttpConstants.RESPONSE_404 + HttpConstants.CRLF, null);
+                    return HttpResponse.plainText(HttpConstants.RESPONSE_404 + HttpConstants.CRLF);
                 }
             } else {
-                return new HttpResponse(HttpConstants.RESPONSE_404 + HttpConstants.CRLF, null);
+                return HttpResponse.plainText(HttpConstants.RESPONSE_404 + HttpConstants.CRLF);
             }
         } else if ("/user-agent".equals(endpoint)) {
             String userAgent = HttpRequestParser.extractHeader(request.headers(), "User-Agent");
-            return buildTextResponse(userAgent != null ? userAgent : "", ContentEncoding.NONE);
+            return buildTextResponse(userAgent != null ? userAgent : "", request.headers(), ContentEncoding.NONE);
         } else {
-            return new HttpResponse(HttpConstants.RESPONSE_404 + HttpConstants.CRLF, null);
+            return HttpResponse.plainText(HttpConstants.RESPONSE_404 + HttpConstants.CRLF);
         }
     }
 
@@ -55,15 +55,15 @@ class HttpRequestHandler {
             Path path = Paths.get(filesFolder, fileName);
             try {
                 Files.write(path, request.body().getBytes(StandardCharsets.UTF_8));
-                return new HttpResponse(HttpConstants.RESPONSE_201 + HttpConstants.CRLF, null);
+                return HttpResponse.plainText(HttpConstants.RESPONSE_201 + HttpConstants.CRLF);
             } catch (IOException e) {
-                return new HttpResponse(HttpConstants.RESPONSE_404 + HttpConstants.CRLF, null);
+                return HttpResponse.plainText(HttpConstants.RESPONSE_404 + HttpConstants.CRLF);
             }
         }
-        return new HttpResponse(HttpConstants.RESPONSE_404 + HttpConstants.CRLF, null);
+        return HttpResponse.plainText(HttpConstants.RESPONSE_404 + HttpConstants.CRLF);
     }
 
-    private static HttpResponse buildTextResponse(String msg, ContentEncoding encoding) {
+    private static HttpResponse buildTextResponse(String msg, String requestHeaders, ContentEncoding encoding) {
         String headers = "Content-Type: text/plain" + HttpConstants.CRLF;
         byte[] compressedMsg = null;
         int contentLength = msg.length();
@@ -72,18 +72,31 @@ class HttpRequestHandler {
             compressedMsg = GzipUtil.gzip(msg);
             contentLength = compressedMsg.length;
         }
+        headers += buildConnectionHeaderIfApplicable(requestHeaders);
         headers += "Content-Length: " + contentLength + HttpConstants.CRLF + HttpConstants.CRLF;
 
         if (compressedMsg == null) {
-            return new HttpResponse(HttpConstants.RESPONSE_200 + headers + msg, null);
+            return HttpResponse.plainText(HttpConstants.RESPONSE_200 + headers + msg);
         } else {
-            return new HttpResponse(HttpConstants.RESPONSE_200 + headers, compressedMsg);
+            return HttpResponse.withBinary(HttpConstants.RESPONSE_200 + headers, compressedMsg);
         }
     }
 
-    private static HttpResponse buildFileResponse(byte[] content) {
+    private static HttpResponse buildFileResponse(byte[] content, String requestHeaders) {
         String headers = "Content-Type: application/octet-stream" + HttpConstants.CRLF +
-                "Content-Length: " + content.length + HttpConstants.CRLF + HttpConstants.CRLF;
-        return new HttpResponse(HttpConstants.RESPONSE_200 + headers, content);
+                "Content-Length: " + content.length + HttpConstants.CRLF;
+        headers += buildConnectionHeaderIfApplicable(requestHeaders);
+        headers += HttpConstants.CRLF;
+
+        return HttpResponse.withBinary(HttpConstants.RESPONSE_200 + headers, content);
+    }
+
+    private static String buildConnectionHeaderIfApplicable(String requestHeaders){
+        String connectionHeader = HttpRequestParser.extractHeader(requestHeaders, "Connection");
+        if ("close".equalsIgnoreCase(connectionHeader)) {
+            return "Connection: close" + HttpConstants.CRLF;
+        }
+
+        return "";
     }
 }
